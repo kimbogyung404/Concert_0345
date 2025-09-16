@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Concert Stage</title>
+
+  <!-- ✅ Pretendard 웹폰트 적용 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css" />
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Pretendard Variable', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(to bottom, #000000, #CD42FF, #FFB18D, #000000);
+      background-size: 400% 400%;
+      animation: gradientMove 20s ease infinite;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 72px;
+      box-sizing: border-box;
+      gap: 28px;
+    }
+
+    @keyframes gradientMove {
+      0%   { background-position: 50% 0%; }
+      50%  { background-position: 50% 100%; }
+      100% { background-position: 50% 0%; }
+    }
+
+    .top-buttons {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 10;
+    }
+
+    .top-buttons-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .top-buttons button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: 'Pretendard Variable', sans-serif;
+      transition: background 0.3s ease;
+    }
+
+    .top-buttons .basic-button {
+      background: white;
+      color: black;
+    }
+
+    .top-buttons .basic-button:hover {
+      background: #e0e0e0;
+    }
+
+    .top-buttons .track-button {
+      background: transparent;
+      border: 1px solid white;
+      color: white;
+    }
+
+    .top-buttons .track-button.active {
+      background: rgba(255, 255, 255, 0.5);
+      color: black;
+    }
+
+    .stage-box {
+      width: 70vw;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+    }
+
+    .stage-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+
+    .stage-video.active {
+      opacity: 1;
+      z-index: 2;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .button-row img {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      filter: none;
+      cursor: pointer;
+      transition: transform 0.2s;
+      user-select: none;
+    }
+
+    .button-row img:hover {
+      transform: scale(1.1);
+    }
+
+    .button-row img:active {
+      transform: scale(0.95);
+    }
+
+    /* 💥 강한 흔들림 (Y축 ±9px) */
+    @keyframes shake-strong {
+      0%   { transform: translate(4px, 9px) rotate(0.5deg); }
+      10%  { transform: translate(-4px, -9px) rotate(-0.5deg); }
+      20%  { transform: translate(-6px, 9px) rotate(0.5deg); }
+      30%  { transform: translate(6px, -9px) rotate(-0.5deg); }
+      40%  { transform: translate(-5px, 9px) rotate(0.5deg); }
+      50%  { transform: translate(5px, -9px) rotate(-0.5deg); }
+      60%  { transform: translate(-6px, 9px) rotate(0.5deg); }
+      70%  { transform: translate(6px, -9px) rotate(-0.5deg); }
+      80%  { transform: translate(-5px, 9px) rotate(0.5deg); }
+      90%  { transform: translate(5px, -9px) rotate(0.5deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
+    }
+
+    .shake-strong {
+      animation: shake-strong 0.6s ease-in-out;
+    }
+
+    @media (max-width: 900px) {
+      .stage-box { width: 90vw; }
+      .button-row img { width: 60px; height: 60px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 🎵 버튼 영역 -->
+  <div class="top-buttons">
+    <div class="top-buttons-row">
+      <button id="play" class="basic-button">Play</button>
+      <button id="stop" class="basic-button">Stop</button>
+    </div>
+    <button id="rock1Btn" class="track-button">Rock 1</button>
+    <button id="rock2Btn" class="track-button">Rock 2</button>
+  </div>
+
+  <!-- ✅ 스테이지(영상 프레임) -->
+  <div class="stage-box">
+    <video id="stage1" class="stage-video active" src="Stage 1.mp4" autoplay muted loop playsinline></video>
+    <video id="stage2" class="stage-video" src="Stage 2.mp4" muted playsinline></video>
+  </div>
+
+  <!-- ✅ 버튼 줄 -->
+  <div class="button-row">
+    <img id="clapBtn" src="clap.png" alt="clap" />
+    <img id="peopleBtn" src="people.png" alt="people" />
+    <img id="voiceBtn" src="voice.png" alt="voice" />
+    <img id="cheerupBtn" src="cheerup.png" alt="cheerup" />
+  </div>
+
+  <script>
+    // 🎵 음악 파일
+    const rock1 = new Audio("Rock 1.mp3");
+    const rock2 = new Audio("Rock 2.mp3");
+    let currentTrack = null;
+
+    const rock1Btn = document.getElementById("rock1Btn");
+    const rock2Btn = document.getElementById("rock2Btn");
+
+    function stopAllMusic() {
+      [rock1, rock2].forEach(track => {
+        track.pause();
+        track.currentTime = 0;
+      });
+    }
+
+    rock1Btn.addEventListener("click", () => {
+      stopAllMusic();
+      currentTrack = rock1;
+      rock1.play().catch(() => {});
+      rock1Btn.classList.add("active");
+      rock2Btn.classList.remove("active");
+    });
+
+    rock2Btn.addEventListener("click", () => {
+      stopAllMusic();
+      currentTrack = rock2;
+      rock2.play().catch(() => {});
+      rock2Btn.classList.add("active");
+      rock1Btn.classList.remove("active");
+    });
+
+    // ✅ Play 버튼 → 기본적으로 Rock1 자동 재생
+    document.getElementById("play").addEventListener("click", () => {
+      if (!currentTrack) {
+        stopAllMusic();
+        currentTrack = rock1;
+        rock1.play().catch(() => {});
+        rock1Btn.classList.add("active");
+        rock2Btn.classList.remove("active");
+      } else {
+        currentTrack.play().catch(() => {});
+      }
+    });
+
+    document.getElementById("stop").addEventListener("click", () => {
+      stopAllMusic();
+      rock1Btn.classList.remove("active");
+      rock2Btn.classList.remove("active");
+      currentTrack = null;
+    });
+
+    // 🎬 cheerup 버튼 → stage2 → 종료 후 stage1 복귀
+    const stage1 = document.getElementById("stage1");
+    const stage2 = document.getElementById("stage2");
+    const cheerupBtn = document.getElementById("cheerupBtn");
+
+    cheerupBtn.addEventListener("click", () => {
+      stage1.classList.remove("active");
+      stage1.pause();
+
+      stage2.currentTime = 0;
+      stage2.classList.add("active");
+      stage2.play();
+
+      stage2.onended = () => {
+        stage2.classList.remove("active");
+        stage1.classList.add("active");
+        stage1.play();
+      };
+    });
+
+    // 👏 clap 사운드
+    const clapBtn = document.getElementById("clapBtn");
+    const clapSound = new Audio("clapsound.mp3");
+
+    clapBtn.addEventListener("click", () => {
+      clapSound.currentTime = 0;
+      clapSound.play().catch(() => {});
+    });
+
+    // 🔊 voice 사운드
+    const voiceBtn = document.getElementById("voiceBtn");
+    const voiceSound = new Audio("voicesound.mp3");
+
+    voiceBtn.addEventListener("click", () => {
+      voiceSound.currentTime = 0;
+      voiceSound.play().catch(() => {});
+    });
+
+    // 💥 people → 흔들기
+    const peopleBtn = document.getElementById("peopleBtn");
+    const videos = document.querySelectorAll(".stage-video");
+
+    peopleBtn.addEventListener("click", () => {
+      videos.forEach(video => {
+        if (video.classList.contains("active")) {
+          video.classList.add("shake-strong");
+        }
+      });
+
+      setTimeout(() => {
+        videos.forEach(video => {
+          video.classList.remove("shake-strong");
+        });
+      }, 700);
+    });
+  </script>
+</body>
+</html>
+
